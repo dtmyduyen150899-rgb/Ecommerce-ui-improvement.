@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winemart Mobile Demo - Cải tiến Giao diện TMĐT</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter & Playfair Display -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wine: {
+                            DEFAULT: '#722F37',
+                            dark: '#521E24',
+                            light: '#F8F0F1'
+                        },
+                        gold: {
+                            DEFAULT: '#D4AF37',
+                            dark: '#B59224',
+                            light: '#FDF9EC'
+                        },
+                        cream: '#F9F9F6'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-neutral-900 text-neutral-800 min-h-screen flex flex-col items-center justify-center p-0 sm:p-4 selection:bg-wine selection:text-white">
+
+    <!-- Thanh công cụ điều khiển Demo bên ngoài khung điện thoại (Chỉ hiện trên màn hình lớn) -->
+    <div id="demoControls" class="hidden sm:flex items-center justify-between w-full max-w-[430px] mb-3 px-3 py-2 bg-neutral-800/90 backdrop-blur border border-neutral-700 rounded-xl text-xs text-neutral-300 shadow-lg">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="font-medium text-white">Winemart Mobile UX Demo</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleDeviceFrame()" id="frameToggleBtn" class="px-2.5 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-expand"></i>
+                <span>Toàn màn hình</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- KHUNG MÔ PHỎNG ĐIỆN THOẠI (MOBILE VIEWPORT 430px) -->
+    <div id="deviceWrapper" class="relative w-full sm:w-[430px] h-screen sm:h-[840px] bg-cream sm:rounded-[38px] sm:border-[8px] sm:border-neutral-800 shadow-2xl overflow-hidden flex flex-col transition-all duration-300">
+        
+        <!-- Thanh trạng thái giả lập iOS (Chỉ hiện khi ở chế độ khung điện thoại) -->
+        <div id="statusBar" class="hidden sm:flex items-center justify-between px-6 pt-2 pb-1 bg-wine text-white text-[11px] font-medium select-none shrink-0">
+            <span>17:51</span>
+            <div class="w-24 h-4 bg-black rounded-full mx-auto"></div>
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-signal"></i>
+                <i class="fa-solid fa-wifi"></i>
+                <i class="fa-solid fa-battery-full"></i>
+            </div>
+        </div>
+
+        <!-- 1. THANH HEADER CỐ ĐỊNH (STICKY HEADER) -->
+        <header class="bg-wine text-white px-3.5 py-2.5 shadow-md z-30 shrink-0">
+            <div class="flex items-center justify-between gap-2.5">
+                <!-- Logo Winemart -->
+                <button onclick="navigateTo('catalog')" class="flex items-center gap-1.5 text-left shrink-0 cursor-pointer group">
+                    <div class="w-8 h-8 rounded-lg bg-gold/20 border border-gold flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-wine transition">
+                        <i class="fa-solid fa-wine-glass-empty text-sm"></i>
+                    </div>
+                    <div>
+                        <span class="font-serif font-bold text-base tracking-wide text-white block leading-none">WINEMART</span>
+                        <span class="text-[9px] text-gold uppercase tracking-widest block mt-0.5">Fine Wine & Spirits</span>
+                    </div>
+                </button>
+
+                <!-- Thanh tìm kiếm trực tiếp có Autocomplete -->
+                <div class="relative flex-1">
+                    <div class="relative flex items-center">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 text-neutral-400 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="searchInput"
+                            oninput="handleSearchInput(this.value)"
+                            onfocus="handleSearchInput(this.value)"
+                            placeholder="Tìm rượu vang Ý, New Zealand..." 
+                            class="w-full bg-white text-neutral-800 text-xs rounded-full pl-8 pr-7 py-2 focus:outline-none focus:ring-2 focus:ring-gold placeholder:text-neutral-400"
+                        >
+                        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2 text-neutral-400 hover:text-neutral-600 p-1">
+                            <i class="fa-solid fa-circle-xmark text-xs"></i>
+                        </button>
+                    </div>
+
+                    <!-- Dropdown gợi ý tự động (Autocomplete) -->
+                    <div id="autocompleteDropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden z-50 text-neutral-800 max-h-64 overflow-y-auto">
+                        <!-- Nội dung gợi ý được render bằng JS -->
+                    </div>
+                </div>
+
+                <!-- Nút Giỏ hàng -->
+                <button onclick="navigateTo('cart')" class="relative p-2 rounded-full bg-wine-dark hover:bg-black/30 transition shrink-0 cursor-pointer" aria-label="Giỏ hàng">
+                    <i class="fa-solid fa-cart-shopping text-base text-gold"></i>
+                    <span id="headerCartBadge" class="absolute -top-0.5 -right-0.5 bg-red-600 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 border border-wine">2</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- KHU VỰC NỘI DUNG CUỘN CHÍNH -->
+        <div id="mainScrollArea" class="flex-1 overflow-y-auto no-scrollbar relative bg-cream">
+
+            <!-- ==========================================
+                 MÀN HÌNH 1: DANH MỤC SẢN PHẨM (CATALOG)
+                 ========================================== -->
+            <div id="screen-catalog" class="animate-fade-in pb-6">
+                
+                <!-- Banner nhỏ thông báo ưu đãi & Giao nhanh 4H -->
+                <div class="bg-gradient-to-r from-wine-dark via-wine to-wine-dark text-white px-3.5 py-2 flex items-center justify-between text-[11px] border-b border-gold/30">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-truck-fast text-gold"></i>
+                        <span>Giao hỏa tốc <strong>4 giờ</strong> tại TP.HCM & HN</span>
+                    </span>
+                    <span class="bg-gold text-wine-dark font-bold px-1.5 py-0.5 rounded text-[10px]">VIP +5%</span>
+                </div>
+
+                <!-- Thanh công cụ cố định (Sticky Filter & Sort Bar) -->
+                <div class="sticky top-0 z-20 bg-white/95 backdrop-blur-sm px-3 py-2.5 border-b border-neutral-200 shadow-sm flex items-center justify-between gap-2">
+                    <!-- Nút mở bộ lọc trượt -->
+                    <button onclick="toggleFilterDrawer(true)" class="flex items-center gap-1.5 bg-cream hover:bg-neutral-100 border border-neutral-300 text-neutral-800 px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0">
+                        <i class="fa-solid fa-sliders text-wine"></i>
+                        <span>Lọc</span>
+                        <span id="activeFilterCount" class="hidden bg-wine text-white text-[10px] px-1.5 rounded-full">0</span>
+                    </button>
+
+                    <!-- Dropdown sắp xếp -->
+                    <div class="relative flex-1">
+                        <select id="sortSelect" onchange="applyFiltersAndSort()" class="w-full appearance-none bg-cream border border-neutral-300 text-neutral-800 text-xs font-medium rounded-lg pl-2.5 pr-7 py-2 focus:outline-none focus:border-wine cursor-pointer">
+                            <option value="popular">Sắp xếp: Phổ biến nhất</option>
+                            <option value="price-asc">Giá: Thấp đến Cao</option>
+                            <option value="price-desc">Giá: Cao xuống Thấp</option>
+                            <option value="discount">Khuyến mãi tốt nhất</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-neutral-500 pointer-events-none"></i>
+                    </div>
+
+                    <!-- Nút chuyển đổi Grid 2 cột / List 1 cột -->
+                    <button onclick="toggleViewMode()" id="viewModeBtn" class="w-9 h-9 rounded-lg bg-wine text-white flex items-center justify-center hover:bg-wine-dark transition cursor-pointer shrink-0" title="Đổi kiểu hiển thị">
+                        <i id="viewModeIcon" class="fa-solid fa-list text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Thanh danh mục nhanh (Quick Category Pills) -->
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar px-3 py-2.5 bg-white border-b border-neutral-100">
+                    <button onclick="quickFilterCategory('all')" class="cat-pill active px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-wine text-white transition cursor-pointer" data-cat="all">Tất cả (4)</button>
+                    <button onclick="quickFilterCategory('Vang Đỏ')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition cursor-pointer" data-cat="Vang Đỏ">Vang Đỏ</button>
+                    <button onclick="quickFilterCategory('Vang Trắng')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition cursor-pointer" data-cat="Vang Trắng">Vang Trắng</button>
+                    <button onclick="quickFilterCategory('Vang Nổ')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition cursor-pointer" data-cat="Vang Nổ">Vang Nổ</button>
+                </div>
+
+                <!-- Trạng thái kết quả lọc -->
+                <div class="px-3.5 pt-2.5 pb-1 flex items-center justify-between text-xs text-neutral-500">
+                    <span>Hiển thị <strong id="resultCount" class="text-neutral-800">4</strong> sản phẩm</span>
+                    <button id="resetFiltersLink" onclick="resetAllFilters()" class="hidden text-wine font-medium underline cursor-pointer">Xóa bộ lọc</button>
+                </div>
+
+                <!-- LƯỚI / DANH SÁCH SẢN PHẨM -->
+                <div id="productContainer" class="p-3 grid grid-cols-2 gap-2.5">
+                    <!-- Sản phẩm được render động bằng JavaScript -->
+                </div>
+            </div>
+
+
+            <!-- ==========================================
+                 MÀN HÌNH 2: CHI TIẾT SẢN PHẨM (PDP)
+                 ========================================== -->
+            <div id="screen-detail" class="hidden animate-fade-in pb-24 bg-white min-h-full">
+                <!-- Thanh điều hướng phụ -->
+                <div class="sticky top-0 z-20 bg-white/95 backdrop-blur px-3 py-2.5 border-b border-neutral-200 flex items-center justify-between">
+                    <button onclick="navigateTo('catalog')" class="flex items-center gap-1.5 text-neutral-700 hover:text-wine font-medium text-xs py-1 px-2 rounded-lg hover:bg-neutral-100 transition cursor-pointer">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Danh sách</span>
+                    </button>
+                    <span class="text-xs font-semibold text-neutral-500 truncate max-w-[180px]" id="pdpBreadcrumb">Chi tiết rượu</span>
+                    <button onclick="shareProduct()" class="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-600 cursor-pointer">
+                        <i class="fa-solid fa-share-nodes text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Thư viện ảnh đa góc + Nút Zoom -->
+                <div class="relative bg-white border-b border-neutral-100">
+                    <div id="pdpBadgeContainer" class="absolute top-3 left-3 z-10 flex flex-col gap-1"></div>
+                    
+                    <button onclick="openZoomModal()" class="absolute bottom-3 right-3 z-10 bg-black/60 hover:bg-black/80 text-white text-[11px] px-2.5 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        <span>Phóng to</span>
+                    </button>
+
+                    <!-- Ảnh chính -->
+                    <div onclick="openZoomModal()" class="w-full h-72 flex items-center justify-center overflow-hidden cursor-zoom-in bg-white p-2">
+                        <img id="pdpMainImage" src="" alt="Product Image" class="w-full h-full object-contain transition-transform duration-300 hover:scale-105">
+                    </div>
+                </div>
+
+                <!-- Thumbnails chọn góc ảnh -->
+                <div id="pdpThumbnails" class="flex items-center justify-center gap-2.5 py-3 px-4 bg-white border-b border-neutral-100">
+                    <!-- Thumbnails render bằng JS -->
+                </div>
+
+                <!-- Thông tin cốt lõi & Giá -->
+                <div class="p-4">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <span id="pdpOrigin" class="text-[11px] font-bold uppercase tracking-wider text-wine bg-wine-light px-2 py-0.5 rounded">PHÁP • VANG ĐỎ</span>
+                        <span class="text-[11px] font-medium text-emerald-600 flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check"></i> Còn hàng tại showroom
+                        </span>
+                    </div>
+
+                    <h1 id="pdpTitle" class="font-serif text-lg font-bold text-neutral-900 leading-snug mt-1.5">Tên sản phẩm</h1>
+
+                    <!-- Đánh giá sao -->
+                    <div class="flex items-center gap-2 mt-1.5 text-xs">
+                        <div class="flex text-gold">
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star-half-stroke"></i>
+                        </div>
+                        <span class="text-neutral-500">(4.8 • 36 đánh giá thực tế)</span>
+                    </div>
+
+                    <!-- Khối Giá -->
+                    <div id="pdpPriceBox" class="mt-3 p-3 rounded-xl bg-cream border border-neutral-200 flex items-baseline justify-between">
+                        <!-- Giá render bằng JS -->
+                    </div>
+
+                    <!-- Bảng Thông số kỹ thuật 2 cột -->
+                    <div class="mt-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2.5">Thông số đặc thù</h3>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-wine/10 text-wine flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-wine-bottle text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-neutral-500 block">Dung tích</span>
+                                    <strong id="pdpVolume" class="text-xs text-neutral-800">750 ml</strong>
+                                </div>
+                            </div>
+
+                            <div class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-wine/10 text-wine flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-percent text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-neutral-500 block">Nồng độ cồn</span>
+                                    <strong id="pdpAbv" class="text-xs text-neutral-800">13.5% ABV</strong>
+                                </div>
+                            </div>
+
+                            <div class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-wine/10 text-wine flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-earth-americas text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-neutral-500 block">Xuất xứ</span>
+                                    <strong id="pdpCountry" class="text-xs text-neutral-800">Bordeaux, Pháp</strong>
+                                </div>
+                            </div>
+
+                            <div class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-wine/10 text-wine flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-grapes text-sm"></i>
+                                    <i class="fa-solid fa-tag text-sm"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-neutral-500 block">Giống nho / Loại</span>
+                                    <strong id="pdpGrape" class="text-xs text-neutral-800">Cabernet Sauvignon</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Nội dung chi tiết: Hương vị & Món ăn kèm -->
+                    <div class="mt-5">
+                        <div class="flex border-b border-neutral-200">
+                            <button onclick="switchPdpTab('tasting')" id="tabBtn-tasting" class="flex-1 py-2.5 text-xs font-bold text-wine border-b-2 border-wine transition cursor-pointer">
+                                Hương vị & Nếm thử
+                            </button>
+                            <button onclick="switchPdpTab('pairing')" id="tabBtn-pairing" class="flex-1 py-2.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 border-b-2 border-transparent transition cursor-pointer">
+                                Gợi ý món ăn kèm
+                            </button>
+                        </div>
+
+                        <!-- Nội dung Tab 1: Hương vị -->
+                        <div id="tabContent-tasting" class="pt-3.5 space-y-2.5 text-xs text-neutral-700 leading-relaxed">
+                            <div class="flex items-start gap-2.5 bg-wine-light/50 p-2.5 rounded-lg">
+                                <span class="w-2 h-2 rounded-full bg-wine mt-1.5 shrink-0"></span>
+                                <p><strong class="text-neutral-900">Màu sắc:</strong> <span id="pdpColor">Đỏ ruby đậm sâu quyến rũ.</span></p>
+                            </div>
+                            <div class="flex items-start gap-2.5 bg-wine-light/50 p-2.5 rounded-lg">
+                                <span class="w-2 h-2 rounded-full bg-gold mt-1.5 shrink-0"></span>
+                                <p><strong class="text-neutral-900">Hương thơm:</strong> <span id="pdpAroma">Phức hợp trái cây chín mọng, gỗ sồi và vani.</span></p>
+                            </div>
+                            <div class="flex items-start gap-2.5 bg-wine-light/50 p-2.5 rounded-lg">
+                                <span class="w-2 h-2 rounded-full bg-neutral-700 mt-1.5 shrink-0"></span>
+                                <p><strong class="text-neutral-900">Vị giác:</strong> <span id="pdpPalate">Cấu trúc cân bằng, tannin mượt mà, hậu vị kéo dài.</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Nội dung Tab 2: Món ăn kèm -->
+                        <div id="tabContent-pairing" class="hidden pt-3.5 text-xs text-neutral-700 leading-relaxed">
+                            <div class="p-3 rounded-xl bg-gold-light border border-gold/30">
+                                <div class="flex items-center gap-2 font-bold text-neutral-900 mb-1.5">
+                                    <i class="fa-solid fa-utensils text-wine"></i>
+                                    <span>Kết hợp ẩm thực hoàn hảo:</span>
+                                </div>
+                                <p id="pdpPairing" class="text-neutral-700">Thịt bò bít tết (Steak), sườn cừu nướng thảo mộc, phô mai lâu năm hoặc các món thịt đỏ hầm sốt tiêu đen. Nhiệt độ phục vụ lý tưởng: 16°C – 18°C.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ==========================================
+                 MÀN HÌNH 3: GIỎ HÀNG (SHOPPING CART)
+                 ========================================== -->
+            <div id="screen-cart" class="hidden animate-fade-in pb-28 min-h-full bg-cream">
+                <!-- Thanh tiêu đề giỏ hàng -->
+                <div class="bg-white px-3.5 py-3 border-b border-neutral-200 flex items-center justify-between sticky top-0 z-20">
+                    <button onclick="navigateTo('catalog')" class="flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-wine cursor-pointer">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Tiếp tục mua</span>
+                    </button>
+                    <h2 class="font-bold text-sm text-neutral-900">Giỏ hàng của bạn</h2>
+                    <button onclick="clearCart()" class="text-[11px] text-red-600 hover:underline cursor-pointer">Xóa hết</button>
+                </div>
+
+                <!-- Danh sách sản phẩm trong giỏ -->
+                <div id="cartItemsList" class="p-3 space-y-2.5">
+                    <!-- Render bằng JS -->
+                </div>
+
+                <!-- Trạng thái giỏ hàng trống -->
+                <div id="emptyCartState" class="hidden py-12 px-6 text-center">
+                    <div class="w-16 h-16 rounded-full bg-neutral-200/70 text-neutral-400 flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-wine-glass"></i>
+                    </div>
+                    <h3 class="font-bold text-neutral-800 text-sm mb-1">Giỏ hàng đang trống</h3>
+                    <p class="text-xs text-neutral-500 mb-4">Hãy khám phá bộ sưu tập rượu vang nhập khẩu thượng hạng của Winemart.</p>
+                    <button onclick="navigateTo('catalog')" class="bg-wine text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-wine-dark transition cursor-pointer">
+                        Khám phá sản phẩm ngay
+                    </button>
+                </div>
+
+                <!-- Khu vực Mã giảm giá & Tổng kết (Chỉ hiện khi có sản phẩm) -->
+                <div id="cartSummarySection" class="px-3 space-y-3">
+                    
+                    <!-- Ô nhập mã giảm giá -->
+                    <div class="bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
+                        <label class="text-xs font-bold text-neutral-800 flex items-center gap-1.5 mb-2">
+                            <i class="fa-solid fa-ticket text-wine"></i>
+                            <span>Mã ưu đãi / Voucher</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="text" id="promoCodeInput" placeholder="Nhập mã: WINEMART10" class="flex-1 bg-cream border border-neutral-300 rounded-lg px-3 py-2 text-xs uppercase font-medium focus:outline-none focus:border-wine">
+                            <button onclick="applyPromoCode()" class="bg-neutral-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 rounded-lg transition cursor-pointer">
+                                Áp dụng
+                            </button>
+                        </div>
+                        <p id="promoMessage" class="text-[11px] mt-1.5 hidden"></p>
+                        <div class="mt-2 flex items-center gap-1.5 text-[10px] text-neutral-500">
+                            <span>Gợi ý: Bấm dùng thử</span>
+                            <button onclick="fillPromo('WINEMART10')" class="bg-wine-light text-wine font-bold px-1.5 py-0.5 rounded border border-wine/20 cursor-pointer">WINEMART10</button>
+                            <span>(Giảm 10%)</span>
+                        </div>
+                    </div>
+
+                    <!-- Gợi ý mua kèm (Cross-sell Accessories) -->
+                    <div class="bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
+                        <h3 class="text-xs font-bold text-neutral-800 mb-2.5 flex items-center justify-between">
+                            <span>Phụ kiện thưởng rượu gợi ý</span>
+                            <span class="text-[10px] font-normal text-wine">Mua kèm tiện lợi</span>
+                        </h3>
+                        <div id="crossSellList" class="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+                            <!-- Render bằng JS -->
+                        </div>
+                    </div>
+
+                    <!-- Bảng tính tiền chi tiết -->
+                    <div class="bg-white p-3.5 rounded-xl border border-neutral-200 shadow-sm space-y-2 text-xs">
+                        <div class="flex justify-between text-neutral-600">
+                            <span>Tạm tính:</span>
+                            <span id="cartSubtotal" class="font-medium text-neutral-900">0 đ</span>
+                        </div>
+                        <div class="flex justify-between text-emerald-600">
+                            <span>Giảm giá ưu đãi:</span>
+                            <span id="cartDiscount" class="font-medium">- 0 đ</span>
+                        </div>
+                        <div class="flex justify-between text-neutral-600">
+                            <span>Phí giao hỏa tốc 4H:</span>
+                            <span class="font-medium text-emerald-600">Miễn phí</span>
+                        </div>
+                        <div class="border-t border-dashed border-neutral-200 pt-2.5 flex justify-between items-baseline">
+                            <span class="font-bold text-neutral-900 text-sm">Tổng thanh toán:</span>
+                            <span id="cartTotal" class="font-bold text-wine text-base">0 đ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- Hết khu vực cuộn chính -->
+
+
+        <!-- ==========================================
+             THANH HÀNH ĐỘNG CỐ ĐỊNH DƯỚI ĐÁY (STICKY BOTTOM BARS)
+             ========================================== -->
+        
+        <!-- Bottom Bar cho Màn hình Chi tiết sản phẩm (PDP) -->
+        <div id="pdpBottomBar" class="hidden bg-white border-t border-neutral-200 px-3 py-2.5 flex items-center gap-2 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] shrink-0">
+            <!-- Nút Zalo / Hotline -->
+            <a href="https://zalo.me/0989169900" target="_blank" class="flex flex-col items-center justify-center px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition shrink-0">
+                <i class="fa-solid fa-comment-dots text-sm"></i>
+                <span class="text-[9px] font-bold mt-0.5">Zalo tư vấn</span>
+            </a>
+
+            <!-- Bộ chọn số lượng (+/-) -->
+            <div id="pdpQtyWrapper" class="flex items-center border border-neutral-300 rounded-xl bg-cream h-10 shrink-0">
+                <button onclick="updatePdpQty(-1)" class="w-8 h-full flex items-center justify-center text-neutral-600 hover:text-wine font-bold cursor-pointer">-</button>
+                <span id="pdpQtyValue" class="w-7 text-center text-xs font-bold text-neutral-900">1</span>
+                <button onclick="updatePdpQty(1)" class="w-8 h-full flex items-center justify-center text-neutral-600 hover:text-wine font-bold cursor-pointer">+</button>
+            </div>
+
+            <!-- Nút Thêm vào giỏ hàng / Liên hệ báo giá -->
+            <button id="pdpMainActionBtn" onclick="addCurrentPdpToCart()" class="flex-1 h-10 bg-wine hover:bg-wine-dark text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition cursor-pointer">
+                <i class="fa-solid fa-cart-plus"></i>
+                <span>Thêm vào giỏ hàng</span>
+            </button>
+        </div>
+
+        <!-- Bottom Bar cho Màn hình Giỏ hàng -->
+        <div id="cartBottomBar" class="hidden bg-white border-t border-neutral-200 px-3.5 py-3 flex items-center justify-between gap-3 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] shrink-0">
+            <div>
+                <span class="text-[10px] text-neutral-500 block">Tổng thanh toán</span>
+                <strong id="bottomCartTotal" class="text-sm font-bold text-wine">0 đ</strong>
+            </div>
+            <button onclick="submitOrder()" class="bg-wine hover:bg-wine-dark text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer">
+                <span>Đặt hàng ngay</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+
+        <!-- ==========================================
+             NGĂN KÉO BỘ LỌC TRƯỢT NGANG (OFF-CANVAS FILTER DRAWER)
+             ========================================== -->
+        <div id="filterOverlay" onclick="toggleFilterDrawer(false)" class="hidden absolute inset-0 bg-black/50 backdrop-blur-[1px] z-40 transition-opacity"></div>
+        
+        <aside id="filterDrawer" class="absolute top-0 right-0 bottom-0 w-[85%] max-w-[340px] bg-white z-50 translate-x-full drawer-transition flex flex-col shadow-2xl">
+            <!-- Header Drawer -->
+            <div class="px-4 py-3.5 bg-wine text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-gold text-xs"></i>
+                    <h3 class="font-bold text-sm">Bộ lọc sản phẩm</h3>
+                </div>
+                <button onclick="toggleFilterDrawer(false)" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Nội dung bộ lọc -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+                
+                <!-- 1. Lọc theo Quốc gia (Có ô tìm kiếm nhanh + Số lượng SP) -->
+                <div>
+                    <h4 class="font-bold text-neutral-900 mb-2 flex items-center justify-between">
+                        <span>Quốc gia sản xuất</span>
+                        <span class="text-[10px] font-normal text-neutral-400">Chọn nhiều</span>
+                    </h4>
+                    <!-- Ô tìm nhanh trong bộ lọc -->
+                    <div class="relative mb-2.5">
+                        <i class="fa-solid fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[11px]"></i>
+                        <input type="text" oninput="filterCountryOptions(this.value)" placeholder="Tìm nhanh quốc gia (Ý, New Zealand...)" class="w-full bg-cream border border-neutral-300 rounded-lg pl-7 pr-2.5 py-1.5 text-xs focus:outline-none focus:border-wine">
+                    </div>
+                    <div id="countryFilterList" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        <!-- Render bằng JS -->
+                    </div>
+                </div>
+
+                <hr class="border-neutral-200">
+
+                <!-- 2. Lọc theo Khoảng giá -->
+                <div>
+                    <h4 class="font-bold text-neutral-900 mb-2.5">Khoảng giá bán</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priceRange" value="all" checked class="peer sr-only">
+                            <div class="p-2 text-center rounded-lg border border-neutral-300 peer-checked:border-wine peer-checked:bg-wine-light peer-checked:text-wine peer-checked:font-bold transition">Tất cả mức giá</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priceRange" value="under-1m" class="peer sr-only">
+                            <div class="p-2 text-center rounded-lg border border-neutral-300 peer-checked:border-wine peer-checked:bg-wine-light peer-checked:text-wine peer-checked:font-bold transition">Dưới 1 triệu</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priceRange" value="1m-5m" class="peer sr-only">
+                            <div class="p-2 text-center rounded-lg border border-neutral-300 peer-checked:border-wine peer-checked:bg-wine-light peer-checked:text-wine peer-checked:font-bold transition">1 – 5 triệu</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priceRange" value="above-5m" class="peer sr-only">
+                            <div class="p-2 text-center rounded-lg border border-neutral-300 peer-checked:border-wine peer-checked:bg-wine-light peer-checked:text-wine peer-checked:font-bold transition">Trên 5 triệu</div>
+                        </label>
+                    </div>
+                </div>
+
+                <hr class="border-neutral-200">
+
+                <!-- 3. Lọc theo Nồng độ cồn -->
+                <div>
+                    <h4 class="font-bold text-neutral-900 mb-2.5">Nồng độ cồn (ABV)</h4>
+                    <div class="space-y-2">
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-cream border border-neutral-200 cursor-pointer">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" value="wine-abv" class="abv-checkbox accent-wine w-3.5 h-3.5">
+                                <span>Vang nhẹ & vừa (7.5% – 15%)</span>
+                            </div>
+                            <span class="text-[10px] text-neutral-500 bg-white px-1.5 py-0.5 rounded border">4</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Drawer -->
+            <div class="p-3.5 border-t border-neutral-200 bg-cream flex gap-2.5 shrink-0">
+                <button onclick="resetAllFilters(); toggleFilterDrawer(false);" class="flex-1 py-2.5 rounded-xl border border-neutral-300 bg-white text-neutral-700 font-semibold text-xs hover:bg-neutral-100 cursor-pointer">
+                    Thiết lập lại
+                </button>
+                <button onclick="applyFiltersAndSort(); toggleFilterDrawer(false);" class="flex-1 py-2.5 rounded-xl bg-wine text-white font-semibold text-xs hover:bg-wine-dark shadow-sm cursor-pointer">
+                    Xem kết quả
+                </button>
+            </div>
+        </aside>
+
+
+        <!-- ==========================================
+             MODAL PHÓNG TO ẢNH SẢN PHẨM (ZOOM MODAL)
+             ========================================== -->
+        <div id="zoomModal" class="hidden absolute inset-0 bg-black/95 z-50 flex flex-col justify-between p-4 animate-fade-in">
+            <div class="flex items-center justify-between text-white">
+                <span class="text-xs font-medium text-neutral-300">Chạm hoặc cuộn để xem rõ nhãn chai</span>
+                <button onclick="closeZoomModal()" class="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white cursor-pointer">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <div class="flex-1 flex items-center justify-center overflow-hidden my-4">
+                <img id="zoomedImage" src="" alt="Zoomed Wine" class="max-w-full max-h-full object-contain rounded-lg transition-transform duration-200 scale-110">
+            </div>
+            <div class="text-center text-white/80 text-xs pb-2" id="zoomCaption"></div>
+        </div>
+
+
+        <!-- ==========================================
+             THÔNG BÁO TOAST / HỘP THOẠI XÁC NHẬN
+             ========================================== -->
+        <div id="toastNotification" class="hidden absolute bottom-16 left-1/2 -translate-x-1/2 bg-neutral-900/95 text-white text-xs px-4 py-2.5 rounded-full shadow-xl z-50 flex items-center gap-2 whitespace-nowrap border border-neutral-700">
+            <i class="fa-solid fa-circle-check text-emerald-400"></i>
+            <span id="toastMessage">Đã thêm vào giỏ hàng</span>
+        </div>
+
+        <!-- Modal Báo giá VIP / Đặt hàng thành công -->
+        <div id="customModal" class="hidden absolute inset-0 bg-black/60 backdrop-blur-[1px] z-50 flex items-center justify-center p-5">
+            <div class="bg-white rounded-2xl w-full max-w-[340px] p-5 shadow-2xl animate-fade-in text-center">
+                <div id="modalIcon" class="w-12 h-12 rounded-full bg-wine-light text-wine flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <h3 id="modalTitle" class="font-serif font-bold text-base text-neutral-900 mb-1.5">Tiêu đề</h3>
+                <p id="modalDesc" class="text-xs text-neutral-600 leading-relaxed mb-4">Nội dung thông báo</p>
+                
+                <div id="modalFormArea" class="hidden mb-4 text-left space-y-2">
+                    <input type="text" id="vipPhoneInput" placeholder="Nhập số điện thoại / Zalo của bạn..." class="w-full border border-neutral-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-wine">
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="closeCustomModal()" class="flex-1 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 cursor-pointer">Đóng</button>
+                    <button id="modalConfirmBtn" onclick="closeCustomModal()" class="flex-1 py-2.5 rounded-xl bg-wine text-white text-xs font-semibold hover:bg-wine-dark cursor-pointer">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- KẾT THÚC KHUNG MÔ PHỎNG ĐIỆN THOẠI -->
+
+
+    <!-- ==========================================
+         JAVASCRIPT XỬ LÝ TƯƠNG TÁC & DỮ LIỆU MẪU
+         ========================================== -->
+    <script>
+        // 1. DỮ LIỆU MẪU 4 SẢN PHẨM RƯỢU VANG ĐẶC TRƯNG WINEMART
+        const PRODUCTS = [
+            {
+                id: 1,
+                name: "Rượu Vang Đỏ Ý Papale Linea Oro Primitivo di Manduria DOP",
+                category: "Vang Đỏ",
+                country: "Ý",
+                region: "Puglia, Ý",
+                volume: "750 ml",
+                abv: 14.5,
+                grape: "100% Primitivo di Manduria",
+                price: 1250000,
+                oldPrice: 1470000,
+                discount: 15,
+                isVip: false,
+                isLocalImg: true,
+                images: [
+                    "images/vang-papale-linea-oro.png"
+                ],
+                tasting: {
+                    color: "Đỏ ruby đậm sâu quyến rũ với ánh tím sang trọng.",
+                    aroma: "Phức hợp mứt trái cây đen chín mọng, quyện cùng gỗ sồi, cam thảo và gia vị cay.",
+                    palate: "Cấu trúc đậm đà cân bằng hoàn hảo, tannin mượt mà, hậu vị kéo dài đầy tinh tế.",
+                    pairing: "Thịt bò bít tết (Wagyu Steak), sườn cừu nướng thảo mộc, phô mai lâu năm."
+                }
+            },
+            {
+                id: 2,
+                name: "Rượu Vang Trắng New Zealand Cloudy Bay Sauvignon Blanc",
+                category: "Vang Trắng",
+                country: "New Zealand",
+                region: "Marlborough, New Zealand",
+                volume: "750 ml",
+                abv: 13.5,
+                grape: "100% Sauvignon Blanc",
+                price: 1180000,
+                oldPrice: 1350000,
+                discount: 13,
+                isVip: false,
+                isLocalImg: true,
+                images: [
+                    "images/cloudy-bay-sauvignon-blanc.png"
+                ],
+                tasting: {
+                    color: "Vàng rơm nhạt ánh xanh tươi mát, trong trẻo.",
+                    aroma: "Bùng nổ hương chanh dây, bưởi hồng, táo xanh và cỏ tươi đặc trưng vùng Marlborough.",
+                    palate: "Sảng khoái, độ axit giòn tan sống động cùng hậu vị khoáng chất thanh khiết.",
+                    pairing: "Hàu sống vắt chanh, sashimi cá hồi, tôm hùm hấp bơ tỏi hoặc salad hải sản."
+                }
+            },
+            {
+                id: 3,
+                name: "Rượu Vang Nổ Ý Bottega Gold Prosecco DOC Spumante Brut",
+                category: "Vang Nổ",
+                country: "Ý",
+                region: "Veneto, Ý",
+                volume: "750 ml",
+                abv: 11,
+                grape: "100% Glera",
+                price: 920000,
+                oldPrice: 1080000,
+                discount: 15,
+                isVip: false,
+                isLocalImg: true,
+                images: [
+                    "images/vang-bottega-gold.png"
+                ],
+                tasting: {
+                    color: "Vàng rơm sáng lấp lánh với bọt khí mịn màng bền bỉ.",
+                    aroma: "Hương táo vàng, lê chín, đào trắng hòa quyện cùng hoa keo và hoa linh lan.",
+                    palate: "Tươi tắn, hài hòa, mềm mại với vị trái cây thanh lịch và độ chua cân bằng.",
+                    pairing: "Khai vị tiệc sang trọng, sushi, hải sản tươi sống, phô mai mềm và trái cây tươi."
+                }
+            },
+            {
+                id: 4,
+                name: "Rượu Vang Nổ Ngọt Ý Martini Asti Spumante DOCG",
+                category: "Vang Nổ",
+                country: "Ý",
+                region: "Piedmont, Ý",
+                volume: "750 ml",
+                abv: 7.5,
+                grape: "100% Moscato Bianco",
+                price: 450000,
+                oldPrice: 520000,
+                discount: 13,
+                isVip: false,
+                isLocalImg: true,
+                images: [
+                    "images/vang-martini-asti.png"
+                ],
+                tasting: {
+                    color: "Vàng nhạt rạng rỡ với lớp bọt sủi tăm nhẹ nhàng, vui tươi.",
+                    aroma: "Nổi bật hương nho Moscato tươi, quả đào chín, dưa lưới và mật ong hoa.",
+                    palate: "Ngọt ngào thanh thoát, nhẹ độ (7.5%), dễ uống, hậu vị tươi mát sảng khoái.",
+                    pairing: "Bánh ngọt tráng miệng, tiramisu, trái cây tươi hoặc dùng khai vị tiệc nhẹ."
+                }
+            }
+        ];
+
+        // Sản phẩm phụ kiện Cross-sell trong giỏ hàng
+        const CROSS_SELL_ITEMS = [
+            {
+                id: 101,
+                name: "Bộ 2 Ly Pha Lê Riedel Bordeaux",
+                price: 450000,
+                image: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=300&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 102,
+                name: "Đồ Khui Vang Chuyên Dụng Thép Không Gỉ",
+                price: 180000,
+                image: "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=300&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 103,
+                name: "Hộp Gỗ Đôi Đựng Rượu Quà Biếu",
+                price: 220000,
+                image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=300&auto=format&fit=crop&q=80"
+            }
+        ];
+
+        // 2. TRẠNG THÁI ỨNG DỤNG (STATE)
+        let state = {
+            currentScreen: 'catalog',
+            viewMode: 'grid', // 'grid' (2 cột) hoặc 'list' (1 cột)
+            selectedCategory: 'all',
+            selectedCountries: [],
+            selectedPriceRange: 'all',
+            selectedAbv: [],
+            searchQuery: '',
+            sortBy: 'popular',
+            currentPdpProduct: null,
+            pdpQty: 1,
+            cart: [
+                { product: PRODUCTS[0], qty: 1 }, // Vang Ý Papale Linea Oro
+                { product: PRODUCTS[1], qty: 1 }  // Vang Trắng Cloudy Bay
+            ],
+            promoDiscountPercent: 0,
+            isFullScreen: false
+        };
+
+        // Hàm định dạng tiền tệ VNĐ
+        function formatCurrency(amount) {
+            if (!amount && amount !== 0) return "Liên hệ báo giá";
+            return amount.toLocaleString('vi-VN') + ' đ';
+        }
+
+        // 3. KHỞI TẠO KHI TẢI TRANG
+        window.onload = function() {
+            renderCountryFilters();
+            applyFiltersAndSort();
+            updateCartBadge();
+            renderCrossSell();
+        };
+
+        // Chuyển đổi khung điện thoại / Toàn màn hình
+        function toggleDeviceFrame() {
+            const wrapper = document.getElementById('deviceWrapper');
+            const statusBar = document.getElementById('statusBar');
+            const btn = document.getElementById('frameToggleBtn');
+            state.isFullScreen = !state.isFullScreen;
+
+            if (state.isFullScreen) {
+                wrapper.classList.remove('sm:w-[430px]', 'sm:h-[840px]', 'sm:rounded-[38px]', 'sm:border-[8px]');
+                wrapper.classList.add('w-full', 'h-screen', 'rounded-none', 'border-0');
+                statusBar.classList.add('hidden');
+                btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i><span>Khung điện thoại</span>';
+            } else {
+                wrapper.classList.add('sm:w-[430px]', 'sm:h-[840px]', 'sm:rounded-[38px]', 'sm:border-[8px]');
+                wrapper.classList.remove('w-full', 'h-screen', 'rounded-none', 'border-0');
+                statusBar.classList.remove('hidden');
+                btn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Toàn màn hình</span>';
+            }
+        }
+
+        // 4. ĐIỀU HƯỚNG GIỮA 3 MÀN HÌNH
+        function navigateTo(screenName) {
+            state.currentScreen = screenName;
+            
+            // Ẩn tất cả màn hình & thanh đáy
+            document.getElementById('screen-catalog').classList.add('hidden');
+            document.getElementById('screen-detail').classList.add('hidden');
+            document.getElementById('screen-cart').classList.add('hidden');
+            document.getElementById('pdpBottomBar').classList.add('hidden');
+            document.getElementById('cartBottomBar').classList.add('hidden');
+
+            // Cuộn lên đầu trang
+            document.getElementById('mainScrollArea').scrollTop = 0;
+
+            if (screenName === 'catalog') {
+                document.getElementById('screen-catalog').classList.remove('hidden');
+            } else if (screenName === 'detail') {
+                document.getElementById('screen-detail').classList.remove('hidden');
+                document.getElementById('pdpBottomBar').classList.remove('hidden');
+            } else if (screenName === 'cart') {
+                document.getElementById('screen-cart').classList.remove('hidden');
+                renderCart();
+            }
+        }
+
+        // 5. TÌM KIẾM TỰ ĐỘNG (AUTOCOMPLETE)
+        function handleSearchInput(query) {
+            state.searchQuery = query.trim().toLowerCase();
+            const dropdown = document.getElementById('autocompleteDropdown');
+            const clearBtn = document.getElementById('clearSearchBtn');
+
+            if (state.searchQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+                const matches = PRODUCTS.filter(p => 
+                    p.name.toLowerCase().includes(state.searchQuery) || 
+                    p.country.toLowerCase().includes(state.searchQuery) ||
+                    p.category.toLowerCase().includes(state.searchQuery)
+                );
+
+                if (matches.length > 0) {
+                    dropdown.innerHTML = matches.map(p => `
+                        <div onclick="selectAutocompleteProduct(${p.id})" class="flex items-center gap-2.5 p-2.5 hover:bg-cream border-b border-neutral-100 last:border-0 cursor-pointer transition">
+                            <img src="${p.images[0]}" class="w-10 h-10 rounded-lg object-contain p-0.5 shrink-0 bg-white border border-neutral-100">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-neutral-900 truncate">${p.name}</p>
+                                <span class="text-[11px] font-bold text-wine">${p.isVip ? 'Liên hệ báo giá' : formatCurrency(p.price)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    dropdown.innerHTML = `<div class="p-3 text-center text-xs text-neutral-500">Không tìm thấy rượu phù hợp với "${query}"</div>`;
+                }
+                dropdown.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+                dropdown.classList.add('hidden');
+            }
+
+            if (state.currentScreen === 'catalog') {
+                applyFiltersAndSort();
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            handleSearchInput('');
+        }
+
+        function selectAutocompleteProduct(id) {
+            document.getElementById('autocompleteDropdown').classList.add('hidden');
+            openProductDetail(id);
+        }
+
+        // Ẩn dropdown khi bấm ra ngoài
+        document.addEventListener('click', function(e) {
+            const searchInput = document.getElementById('searchInput');
+            const dropdown = document.getElementById('autocompleteDropdown');
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // 6. BỘ LỌC & SẮP XẾP DANH MỤC (MÀN HÌNH 1)
+        function toggleFilterDrawer(open) {
+            const drawer = document.getElementById('filterDrawer');
+            const overlay = document.getElementById('filterOverlay');
+            if (open) {
+                overlay.classList.remove('hidden');
+                drawer.classList.remove('translate-x-full');
+            } else {
+                drawer.classList.add('translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // Render danh sách quốc gia kèm số lượng sản phẩm
+        function renderCountryFilters(filterText = '') {
+            const countries = [...new Set(PRODUCTS.map(p => p.country))];
+            const container = document.getElementById('countryFilterList');
+            
+            const filteredCountries = countries.filter(c => c.toLowerCase().includes(filterText.toLowerCase()));
+            
+            container.innerHTML = filteredCountries.map(country => {
+                const count = PRODUCTS.filter(p => p.country === country).length;
+                const isChecked = state.selectedCountries.includes(country) ? 'checked' : '';
+                return `
+                    <label class="flex items-center justify-between p-2 rounded-lg hover:bg-cream border border-transparent hover:border-neutral-200 cursor-pointer transition">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" value="${country}" ${isChecked} onchange="toggleCountrySelection('${country}')" class="accent-wine w-3.5 h-3.5 rounded">
+                            <span class="font-medium text-neutral-800">${country}</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">${count}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function filterCountryOptions(val) {
+            renderCountryFilters(val);
+        }
+
+        function toggleCountrySelection(country) {
+            if (state.selectedCountries.includes(country)) {
+                state.selectedCountries = state.selectedCountries.filter(c => c !== country);
+            } else {
+                state.selectedCountries.push(country);
+            }
+        }
+
+        function quickFilterCategory(cat) {
+            state.selectedCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.classList.remove('bg-neutral-100', 'text-neutral-700');
+                    btn.classList.add('bg-wine', 'text-white');
+                } else {
+                    btn.classList.add('bg-neutral-100', 'text-neutral-700');
+                    btn.classList.remove('bg-wine', 'text-white');
+                }
+            });
+            applyFiltersAndSort();
+        }
+
+        function toggleViewMode() {
+            state.viewMode = state.viewMode === 'grid' ? 'list' : 'grid';
+            const container = document.getElementById('productContainer');
+            const icon = document.getElementById('viewModeIcon');
+
+            if (state.viewMode === 'grid') {
+                container.className = 'p-3 grid grid-cols-2 gap-2.5';
+                icon.className = 'fa-solid fa-list text-sm';
+            } else {
+                container.className = 'p-3 flex flex-col gap-2.5';
+                icon.className = 'fa-solid fa-table-cells-large text-sm';
+            }
+            applyFiltersAndSort();
+        }
+
+        function applyFiltersAndSort() {
+            // Lấy giá trị từ Drawer
+            const priceRadio = document.querySelector('input[name="priceRange"]:checked');
+            state.selectedPriceRange = priceRadio ? priceRadio.value : 'all';
+
+            const abvChecked = Array.from(document.querySelectorAll('.abv-checkbox:checked')).map(cb => cb.value);
+            state.selectedAbv = abvChecked;
+
+            state.sortBy = document.getElementById('sortSelect').value;
+
+            // Lọc dữ liệu
+            let filtered = PRODUCTS.filter(p => {
+                // Theo danh mục
+                if (state.selectedCategory !== 'all' && p.category !== state.selectedCategory) return false;
+                // Theo quốc gia
+                if (state.selectedCountries.length > 0 && !state.selectedCountries.includes(p.country)) return false;
+                // Theo từ khóa tìm kiếm
+                if (state.searchQuery && !p.name.toLowerCase().includes(state.searchQuery) && !p.country.toLowerCase().includes(state.searchQuery)) return false;
+                // Theo khoảng giá
+                if (state.selectedPriceRange !== 'all') {
+                    if (p.isVip) return false;
+                    if (state.selectedPriceRange === 'under-1m' && p.price >= 1000000) return false;
+                    if (state.selectedPriceRange === '1m-5m' && (p.price < 1000000 || p.price > 5000000)) return false;
+                    if (state.selectedPriceRange === 'above-5m' && p.price <= 5000000) return false;
+                }
+                // Theo nồng độ cồn
+                if (state.selectedAbv.length > 0) {
+                    const isWineAbv = p.abv <= 15;
+                    const isSpiritsAbv = p.abv >= 40;
+                    if (state.selectedAbv.includes('wine-abv') && !state.selectedAbv.includes('spirits-abv') && !isWineAbv) return false;
+                    if (state.selectedAbv.includes('spirits-abv') && !state.selectedAbv.includes('wine-abv') && !isSpiritsAbv) return false;
+                }
+                return true;
+            });
+
+            // Sắp xếp
+            if (state.sortBy === 'price-asc') {
+                filtered.sort((a, b) => (a.price || 999999999) - (b.price || 999999999));
+            } else if (state.sortBy === 'price-desc') {
+                filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+            } else if (state.sortBy === 'discount') {
+                filtered.sort((a, b) => b.discount - a.discount);
+            }
+
+            // Cập nhật badge đếm số bộ lọc đang kích hoạt
+            let filterCount = state.selectedCountries.length + (state.selectedPriceRange !== 'all' ? 1 : 0) + state.selectedAbv.length;
+            const badge = document.getElementById('activeFilterCount');
+            const resetLink = document.getElementById('resetFiltersLink');
+            if (filterCount > 0) {
+                badge.textContent = filterCount;
+                badge.classList.remove('hidden');
+                resetLink.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+                resetLink.classList.add('hidden');
+            }
+
+            document.getElementById('resultCount').textContent = filtered.length;
+            renderProductCards(filtered);
+        }
+
+        function resetAllFilters() {
+            state.selectedCategory = 'all';
+            state.selectedCountries = [];
+            state.selectedPriceRange = 'all';
+            state.selectedAbv = [];
+            state.searchQuery = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            document.querySelector('input[name="priceRange"][value="all"]').checked = true;
+            document.querySelectorAll('.abv-checkbox').forEach(cb => cb.checked = false);
+            renderCountryFilters();
+            quickFilterCategory('all');
+        }
+
+        // Render thẻ sản phẩm (Grid 2 cột hoặc List 1 cột)
+        function renderProductCards(list) {
+            const container = document.getElementById('productContainer');
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-2 py-12 text-center bg-white rounded-2xl border border-neutral-200 p-6">
+                        <i class="fa-solid fa-wine-bottle text-3xl text-neutral-300 mb-2"></i>
+                        <p class="text-xs font-semibold text-neutral-700">Không tìm thấy sản phẩm phù hợp</p>
+                        <button onclick="resetAllFilters()" class="mt-3 text-xs bg-wine text-white px-4 py-2 rounded-lg font-medium cursor-pointer">Xem tất cả rượu</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = list.map(p => {
+                const badgeHtml = p.isVip 
+                    ? `<span class="absolute top-2 left-2 z-10 bg-gold text-neutral-900 text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">VIP</span>`
+                    : (p.discount > 0 ? `<span class="absolute top-2 left-2 z-10 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">-${p.discount}%</span>` : '');
+
+                const priceHtml = p.isVip
+                    ? `<span class="text-xs font-bold text-gold-dark italic">Liên hệ báo giá</span>`
+                    : `<div>
+                         <span class="text-[13px] font-bold text-wine block leading-tight">${formatCurrency(p.price)}</span>
+                         ${p.oldPrice ? `<span class="text-[10px] text-neutral-400 line-through">${formatCurrency(p.oldPrice)}</span>` : ''}
+                       </div>`;
+
+                const actionButtonsHtml = p.isVip
+                    ? `<button onclick="event.stopPropagation(); openVipQuoteModal('${p.name}')" class="w-full bg-neutral-900 hover:bg-black text-gold text-[11px] font-semibold py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer">
+                         <i class="fa-solid fa-phone-volume"></i>
+                         <span>Nhận báo giá</span>
+                       </button>`
+                    : `<div class="flex gap-1.5 w-full">
+                         <button onclick="event.stopPropagation(); addToCart(${p.id}, 1)" class="flex-1 bg-wine hover:bg-wine-dark text-white text-[11px] font-semibold py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition cursor-pointer">
+                             <i class="fa-solid fa-cart-plus"></i>
+                             <span>Thêm</span>
+                         </button>
+                         <a href="https://zalo.me/0989169900" target="_blank" onclick="event.stopPropagation()" class="bg-[#0068FF] hover:bg-blue-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg flex items-center justify-center transition" title="Tư vấn qua Zalo">
+                             Zalo
+                         </a>
+                       </div>`;
+
+                // Chế độ Lưới 2 cột (Grid View)
+                if (state.viewMode === 'grid') {
+                    return `
+                        <article onclick="openProductDetail(${p.id})" class="bg-white rounded-xl border border-neutral-200/90 overflow-hidden flex flex-col relative shadow-sm hover:shadow-md transition cursor-pointer group">
+                            ${badgeHtml}
+                            <div class="w-full h-36 ${p.isLocalImg ? 'bg-white border-b border-neutral-100' : 'bg-neutral-100'} overflow-hidden">
+                                <img src="${p.images[0]}" alt="${p.name}" loading="lazy" class="w-full h-full ${p.isLocalImg ? 'product-img-contain' : 'product-img-cover'} group-hover:scale-105 transition-transform duration-300">
+                            </div>
+                            <div class="p-2.5 flex-1 flex flex-col">
+                                <span class="text-[10px] font-bold uppercase text-neutral-400 tracking-wide">${p.country} • ${p.category}</span>
+                                <h3 class="text-xs font-semibold text-neutral-900 line-clamp-2 leading-snug mt-0.5 h-8">${p.name}</h3>
+                                <div class="text-[10px] text-neutral-500 mt-1 mb-2">${p.volume} | ${p.abv}% ABV</div>
+                                <div class="mt-auto pt-1.5 border-t border-neutral-100">
+                                    <div class="mb-2 min-h-[30px] flex items-center">${priceHtml}</div>
+                                    ${actionButtonsHtml}
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                } 
+                // Chế độ Danh sách 1 cột (List View - Chi tiết hơn)
+                else {
+                    return `
+                        <article onclick="openProductDetail(${p.id})" class="bg-white rounded-xl border border-neutral-200/90 overflow-hidden flex relative shadow-sm hover:shadow-md transition cursor-pointer group">
+                            ${badgeHtml}
+                            <div class="w-28 ${p.isLocalImg ? 'bg-white border-r border-neutral-100' : 'bg-neutral-100'} shrink-0 overflow-hidden">
+                                <img src="${p.images[0]}" alt="${p.name}" loading="lazy" class="w-full h-full ${p.isLocalImg ? 'product-img-contain' : 'product-img-cover'} group-hover:scale-105 transition-transform duration-300">
+                            </div>
+                            <div class="p-3 flex-1 flex flex-col justify-between min-w-0">
+                                <div>
+                                    <span class="text-[10px] font-bold uppercase text-wine">${p.country} • ${p.category}</span>
+                                    <h3 class="text-xs font-bold text-neutral-900 line-clamp-2 leading-snug mt-0.5">${p.name}</h3>
+                                    <p class="text-[10px] text-neutral-500 mt-1">Dung tích: <strong>${p.volume}</strong> • Nồng độ: <strong>${p.abv}%</strong></p>
+                                </div>
+                                <div class="mt-2.5 flex items-end justify-between gap-2">
+                                    <div>${priceHtml}</div>
+                                    <div class="w-32 shrink-0">${actionButtonsHtml}</div>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                }
+            }).join('');
+        }
+
+        // 7. CHI TIẾT SẢN PHẨM (MÀN HÌNH 2 - PDP)
+        function openProductDetail(productId) {
+            const product = PRODUCTS.find(p => p.id === productId);
+            if (!product) return;
+
+            state.currentPdpProduct = product;
+            state.pdpQty = 1;
+            document.getElementById('pdpQtyValue').textContent = '1';
+
+            // Cập nhật thông tin cơ bản
+            document.getElementById('pdpBreadcrumb').textContent = product.name;
+            document.getElementById('pdpOrigin').textContent = `${product.country} • ${product.category}`;
+            document.getElementById('pdpTitle').textContent = product.name;
+            
+            // Badge
+            const badgeContainer = document.getElementById('pdpBadgeContainer');
+            if (product.isVip) {
+                badgeContainer.innerHTML = `<span class="bg-gold text-neutral-900 text-xs font-bold px-2.5 py-1 rounded-lg shadow">DÒNG SƯU TẦM VIP</span>`;
+            } else if (product.discount > 0) {
+                badgeContainer.innerHTML = `<span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow">Giảm ${product.discount}%</span>`;
+            } else {
+                badgeContainer.innerHTML = '';
+            }
+
+            // Ảnh chính & Thumbnails
+            setPdpMainImage(product.images[0]);
+            const thumbContainer = document.getElementById('pdpThumbnails');
+            thumbContainer.innerHTML = product.images.map((imgUrl, idx) => `
+                <button onclick="setPdpMainImage('${imgUrl}', this)" class="pdp-thumb w-14 h-14 rounded-lg overflow-hidden border-2 ${idx === 0 ? 'border-wine' : 'border-transparent opacity-60'} hover:opacity-100 transition cursor-pointer">
+                    <img src="${imgUrl}" class="w-full h-full object-contain bg-white p-1">
+                </button>
+            `).join('');
+
+            // Khối giá
+            const priceBox = document.getElementById('pdpPriceBox');
+            const qtyWrapper = document.getElementById('pdpQtyWrapper');
+            const mainActionBtn = document.getElementById('pdpMainActionBtn');
+
+            if (product.isVip) {
+                priceBox.innerHTML = `
+                    <div>
+                        <span class="text-[11px] text-neutral-500 block">Giá phân phối VIP</span>
+                        <span class="text-base font-bold text-gold-dark italic">Liên hệ nhận báo giá riêng</span>
+                    </div>
+                    <span class="text-[10px] bg-gold-light text-gold-dark border border-gold/40 px-2 py-1 rounded font-semibold">Hàng hiếm</span>
+                `;
+                qtyWrapper.classList.add('hidden');
+                mainActionBtn.className = "flex-1 h-10 bg-neutral-900 hover:bg-black text-gold font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition cursor-pointer";
+                mainActionBtn.innerHTML = `<i class="fa-solid fa-phone-volume"></i><span>Yêu cầu báo giá VIP</span>`;
+                mainActionBtn.onclick = () => openVipQuoteModal(product.name);
+            } else {
+                priceBox.innerHTML = `
+                    <div>
+                        <span class="text-[11px] text-neutral-500 block">Giá bán ưu đãi</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-lg font-bold text-wine">${formatCurrency(product.price)}</span>
+                            ${product.oldPrice ? `<span class="text-xs text-neutral-400 line-through">${formatCurrency(product.oldPrice)}</span>` : ''}
+                        </div>
+                    </div>
+                    <span class="text-[10px] bg-wine-light text-wine px-2 py-1 rounded font-bold">Tích +120 điểm</span>
+                `;
+                qtyWrapper.classList.remove('hidden');
+                mainActionBtn.className = "flex-1 h-10 bg-wine hover:bg-wine-dark text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition cursor-pointer";
+                mainActionBtn.innerHTML = `<i class="fa-solid fa-cart-plus"></i><span>Thêm vào giỏ hàng</span>`;
+                mainActionBtn.onclick = () => addCurrentPdpToCart();
+            }
+
+            // Thông số kỹ thuật
+            document.getElementById('pdpVolume').textContent = product.volume;
+            document.getElementById('pdpAbv').textContent = product.abv + '% ABV';
+            document.getElementById('pdpCountry').textContent = product.region;
+            document.getElementById('pdpGrape').textContent = product.grape;
+
+            // Ghi chú nếm thử & Món ăn
+            document.getElementById('pdpColor').textContent = product.tasting.color;
+            document.getElementById('pdpAroma').textContent = product.tasting.aroma;
+            document.getElementById('pdpPalate').textContent = product.tasting.palate;
+            document.getElementById('pdpPairing').textContent = product.tasting.pairing;
+
+            switchPdpTab('tasting');
+            navigateTo('detail');
+        }
+
+        function setPdpMainImage(url, btnEl = null) {
+            document.getElementById('pdpMainImage').src = url;
+            document.getElementById('zoomedImage').src = url;
+            if (btnEl) {
+                document.querySelectorAll('.pdp-thumb').forEach(b => {
+                    b.classList.remove('border-wine');
+                    b.classList.add('border-transparent', 'opacity-60');
+                });
+                btnEl.classList.add('border-wine');
+                btnEl.classList.remove('border-transparent', 'opacity-60');
+            }
+        }
+
+        function switchPdpTab(tabName) {
+            const btnTasting = document.getElementById('tabBtn-tasting');
+            const btnPairing = document.getElementById('tabBtn-pairing');
+            const contentTasting = document.getElementById('tabContent-tasting');
+            const contentPairing = document.getElementById('tabContent-pairing');
+
+            if (tabName === 'tasting') {
+                btnTasting.className = "flex-1 py-2.5 text-xs font-bold text-wine border-b-2 border-wine transition cursor-pointer";
+                btnPairing.className = "flex-1 py-2.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 border-b-2 border-transparent transition cursor-pointer";
+                contentTasting.classList.remove('hidden');
+                contentPairing.classList.add('hidden');
+            } else {
+                btnPairing.className = "flex-1 py-2.5 text-xs font-bold text-wine border-b-2 border-wine transition cursor-pointer";
+                btnTasting.className = "flex-1 py-2.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 border-b-2 border-transparent transition cursor-pointer";
+                contentPairing.classList.remove('hidden');
+                contentTasting.classList.add('hidden');
+            }
+        }
+
+        function updatePdpQty(delta) {
+            state.pdpQty = Math.max(1, state.pdpQty + delta);
+            document.getElementById('pdpQtyValue').textContent = state.pdpQty;
+        }
+
+        function addCurrentPdpToCart() {
+            if (!state.currentPdpProduct) return;
+            addToCart(state.currentPdpProduct.id, state.pdpQty);
+        }
+
+        // Zoom Modal
+        function openZoomModal() {
+            if (!state.currentPdpProduct) return;
+            document.getElementById('zoomCaption').textContent = state.currentPdpProduct.name;
+            document.getElementById('zoomModal').classList.remove('hidden');
+        }
+
+        function closeZoomModal() {
+            document.getElementById('zoomModal').classList.add('hidden');
+        }
+
+        // 8. QUẢN LÝ GIỎ HÀNG (MÀN HÌNH 3)
+        function addToCart(productId, quantity = 1) {
+            // Tìm trong PRODUCTS hoặc CROSS_SELL_ITEMS
+            let product = PRODUCTS.find(p => p.id === productId);
+            if (!product) {
+                const accessory = CROSS_SELL_ITEMS.find(a => a.id === productId);
+                if (accessory) {
+                    product = {
+                        id: accessory.id,
+                        name: accessory.name,
+                        price: accessory.price,
+                        images: [accessory.image],
+                        volume: "Phụ kiện"
+                    };
+                }
+            }
+            if (!product || product.isVip) return;
+
+            const existingItem = state.cart.find(item => item.product.id === productId);
+            if (existingItem) {
+                existingItem.qty += quantity;
+            } else {
+                state.cart.push({ product, qty: quantity });
+            }
+
+            updateCartBadge();
+            showToast(`Đã thêm "${product.name.substring(0, 22)}..." vào giỏ`);
+            
+            if (state.currentScreen === 'cart') {
+                renderCart();
+            }
+        }
+
+        function updateCartItemQty(productId, delta) {
+            const itemIndex = state.cart.findIndex(item => item.product.id === productId);
+            if (itemIndex === -1) return;
+
+            state.cart[itemIndex].qty += delta;
+            if (state.cart[itemIndex].qty <= 0) {
+                state.cart.splice(itemIndex, 1);
+            }
+            updateCartBadge();
+            renderCart();
+        }
+
+        function removeCartItem(productId) {
+            state.cart = state.cart.filter(item => item.product.id !== productId);
+            updateCartBadge();
+            renderCart();
+        }
+
+        function clearCart() {
+            state.cart = [];
+            state.promoDiscountPercent = 0;
+            updateCartBadge();
+            renderCart();
+        }
+
+        function updateCartBadge() {
+            const totalItems = state.cart.reduce((sum, item) => sum + item.qty, 0);
+            const badge = document.getElementById('headerCartBadge');
+            badge.textContent = totalItems;
+            if (totalItems === 0) {
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+            }
+        }
+
+        function renderCart() {
+            const listContainer = document.getElementById('cartItemsList');
+            const emptyState = document.getElementById('emptyCartState');
+            const summarySection = document.getElementById('cartSummarySection');
+            const bottomBar = document.getElementById('cartBottomBar');
+
+            if (state.cart.length === 0) {
+                listContainer.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                summarySection.classList.add('hidden');
+                bottomBar.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            summarySection.classList.remove('hidden');
+            bottomBar.classList.remove('hidden');
+
+            listContainer.innerHTML = state.cart.map(item => `
+                <div class="bg-white p-2.5 rounded-xl border border-neutral-200 flex gap-2.5 shadow-sm">
+                    <img src="${item.product.images[0]}" class="w-16 h-16 rounded-lg ${item.product.isLocalImg ? 'object-contain bg-white border border-neutral-100 p-1' : 'object-cover bg-neutral-100'} shrink-0">
+                    <div class="flex-1 min-w-0 flex flex-col justify-between">
+                        <div class="flex justify-between items-start gap-2">
+                            <h4 class="text-xs font-semibold text-neutral-900 line-clamp-2 leading-snug">${item.product.name}</h4>
+                            <button onclick="removeCartItem(${item.product.id})" class="text-neutral-400 hover:text-red-600 p-0.5 cursor-pointer" title="Xóa">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-xs font-bold text-wine">${formatCurrency(item.product.price * item.qty)}</span>
+                            <div class="flex items-center border border-neutral-300 rounded-lg bg-cream h-7">
+                                <button onclick="updateCartItemQty(${item.product.id}, -1)" class="w-6 h-full flex items-center justify-center text-neutral-600 hover:text-wine font-bold text-xs cursor-pointer">-</button>
+                                <span class="w-6 text-center text-xs font-bold text-neutral-900">${item.qty}</span>
+                                <button onclick="updateCartItemQty(${item.product.id}, 1)" class="w-6 h-full flex items-center justify-center text-neutral-600 hover:text-wine font-bold text-xs cursor-pointer">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            calculateCartTotals();
+        }
+
+        // Gợi ý mua kèm Cross-sell
+        function renderCrossSell() {
+            const container = document.getElementById('crossSellList');
+            container.innerHTML = CROSS_SELL_ITEMS.map(item => `
+                <div class="w-36 shrink-0 bg-cream rounded-lg border border-neutral-200 p-2 flex flex-col justify-between">
+                    <div>
+                        <img src="${item.image}" class="w-full h-16 object-cover rounded mb-1.5 bg-white">
+                        <p class="text-[11px] font-semibold text-neutral-800 line-clamp-2 leading-tight h-7">${item.name}</p>
+                    </div>
+                    <div class="mt-1.5 flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-wine">${formatCurrency(item.price)}</span>
+                        <button onclick="addToCart(${item.id}, 1)" class="w-6 h-6 rounded bg-wine text-white flex items-center justify-center hover:bg-wine-dark text-[10px] cursor-pointer" title="Thêm vào giỏ">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Mã giảm giá
+        function fillPromo(code) {
+            document.getElementById('promoCodeInput').value = code;
+            applyPromoCode();
+        }
+
+        function applyPromoCode() {
+            const code = document.getElementById('promoCodeInput').value.trim().toUpperCase();
+            const msg = document.getElementById('promoMessage');
+            msg.classList.remove('hidden');
+
+            if (code === 'WINEMART10') {
+                state.promoDiscountPercent = 10;
+                msg.className = 'text-[11px] mt-1.5 text-emerald-600 font-medium';
+                msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Áp dụng thành công mã giảm 10% tổng đơn hàng!';
+            } else if (code === '') {
+                state.promoDiscountPercent = 0;
+                msg.className = 'text-[11px] mt-1.5 text-red-500';
+                msg.textContent = 'Vui lòng nhập mã giảm giá.';
+            } else {
+                state.promoDiscountPercent = 0;
+                msg.className = 'text-[11px] mt-1.5 text-red-500';
+                msg.textContent = 'Mã ưu đãi không hợp lệ. Hãy thử mã WINEMART10.';
+            }
+            calculateCartTotals();
+        }
+
+        function calculateCartTotals() {
+            const subtotal = state.cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+            const discountAmount = Math.round(subtotal * (state.promoDiscountPercent / 100));
+            const finalTotal = subtotal - discountAmount;
+
+            document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('cartDiscount').textContent = `- ${formatCurrency(discountAmount)}`;
+            document.getElementById('cartTotal').textContent = formatCurrency(finalTotal);
+            document.getElementById('bottomCartTotal').textContent = formatCurrency(finalTotal);
+        }
+
+        // 9. CÁC HỘP THOẠI & THÔNG BÁO (THAY THẾ ALERT)
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.remove('hidden');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2200);
+        }
+
+        function openVipQuoteModal(productName) {
+            document.getElementById('modalIcon').innerHTML = '<i class="fa-solid fa-crown text-gold"></i>';
+            document.getElementById('modalTitle').textContent = 'Yêu cầu Báo giá Rượu VIP';
+            document.getElementById('modalDesc').textContent = `Chuyên viên tư vấn rượu Winemart sẽ liên hệ qua Zalo/SĐT để gửi báo giá tốt nhất cho dòng "${productName}".`;
+            document.getElementById('modalFormArea').classList.remove('hidden');
+            
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            confirmBtn.textContent = 'Gửi yêu cầu';
+            confirmBtn.onclick = function() {
+                closeCustomModal();
+                showToast('Đã gửi yêu cầu! Chuyên viên sẽ liên hệ sau 5 phút.');
+            };
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+
+        function submitOrder() {
+            document.getElementById('modalIcon').innerHTML = '<i class="fa-solid fa-champagne-glasses text-emerald-600"></i>';
+            document.getElementById('modalTitle').textContent = 'Đặt hàng thành công!';
+            document.getElementById('modalDesc').textContent = 'Cảm ơn quý khách đã tin chọn Winemart. Đơn hàng hỏa tốc 4H đang được đóng gói và xác nhận qua Zalo.';
+            document.getElementById('modalFormArea').classList.add('hidden');
+            
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            confirmBtn.textContent = 'Tiếp tục mua sắm';
+            confirmBtn.onclick = function() {
+                clearCart();
+                closeCustomModal();
+                navigateTo('catalog');
+            };
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+
+        function shareProduct() {
+            showToast('Đã sao chép liên kết sản phẩm!');
+        }
+
+        function closeCustomModal() {
+            document.getElementById('customModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
