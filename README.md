@@ -27,9 +27,8 @@ Dự án tập trung cải tiến giao diện người dùng (UI/UX) trên thi�
 
 ## 6. Cải tiến đã thực hiện
 - **Vấn đề ban đầu:**
-  - Trên màn hình điện thoại, thẻ sản phẩm hiển thị giá bán và giá khuyến mãi chưa nổi bật, nút thao tác chật chội khó bấm bằng một tay.
-  - Bộ lọc truyền thống chiếm nhiều diện tích theo chiều dọc, buộc người dùng phải cuộn trang quá dài mới thấy danh sách rượu.
-  - Hình ảnh chai rượu có chiều cao lớn dễ bị cắt mất phần cổ chai hoặc nhãn hiệu nếu dùng tỷ lệ khung ảnh thông thường.
+  - Trên màn hình điện thoại, thẻ sản phẩm hiển thị giá bán chưa nổi bật
+  - Bộ lọc truyền thống chiếm nhiều diện tích theo chiều dọc, bố cục không đẹp 
 - **Thay đổi đã thực hiện:**
   - **Thiết kế lại thẻ sản phẩm (Product Card):** Làm nổi bật giá bán màu đỏ rượu vang (`#722F37`), giá gốc gạch ngang, huy hiệu giảm giá góc trái trên và bố trí cặp nút `Thêm` + `Zalo` ngang hàng dễ thao tác.
   - **Tối ưu không gian di động:** Sử dụng thanh công cụ cố định (`sticky`) kết hợp ngăn kéo lọc trượt ngang (`Off-canvas Filter Drawer`) và các nút chọn danh mục nhanh.
