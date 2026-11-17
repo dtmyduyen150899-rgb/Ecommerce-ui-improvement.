@@ -21,9 +21,8 @@ Dự án tập trung cải tiến giao diện người dùng (UI/UX) trên thi�
 - **JavaScript (Vanilla JS):** Xử lý dữ liệu sản phẩm tĩnh, lọc/sắp xếp và cập nhật giỏ hàng trực tiếp trên trình duyệt (không sử dụng backend hay cơ sở dữ liệu).
 
 ## 5. Cách chạy
-1. Giải nén thư mục dự án (đảm bảo giữ nguyên thư mục `images/` và file `style.css` nằm cùng cấp với `index.html`).
-2. Mở trực tiếp file `index.html` bằng trình duyệt web bất kỳ (Google Chrome, Microsoft Edge, Safari...).
-3. Nhấn nút **"Toàn màn hình"** ở thanh công cụ phía trên hoặc mở **Chrome DevTools (`F12` -> `Toggle Device Toolbar`)** để kiểm tra giao diện ở kích thước máy tính và điện thoại.
+01. Mở trực tiếp file `index.html` bằng trình duyệt web bất kỳ (Google Chrome, Microsoft Edge, Safari...).
+02. Nhấn nút **"Toàn màn hình"** ở thanh công cụ phía trên hoặc mở **Chrome DevTools (`F12` -> `Toggle Device Toolbar`)** để kiểm tra giao diện ở kích thước máy tính và điện thoại.
 
 ## 6. Cải tiến đã thực hiện
 - **Vấn đề ban đầu:**
